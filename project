@@ -1,0 +1,306 @@
+"""
+Final Project - analysis of TSLA stock:
+                Compared to NASDAQ 100
+                TSLA standalone plot with highlight tweets from Elon Musk, along with largest losses
+"""
+
+import pandas as pd
+import os
+import numpy as np
+import plotly.graph_objects as go
+from lenspy import DynamicPlot
+from plotly.subplots import make_subplots
+
+
+
+
+# Using OS library to call CLI commands in Python
+os.system("snscrape --jsonl --max-results 15000 twitter-search 'from:elonmusk'> user-tweets.json")
+
+# Reads the json generated from the CLI command above and creates a pandas dataframe
+tweets_df2 = pd.read_json('user-tweets.json', lines=True)
+
+
+# Export dataframe into a CSV
+tweets_df2.to_csv('user-tweets.csv', sep=',', index=False)
+
+#create dataframe from tweets csv
+df = pd.read_csv("user-tweets.csv", sep = ',', parse_dates=['date'])
+
+print(df[df['date'] == '2020-05-01 15:11:26+00:00'])
+#5111
+print(df[df['date'] == '2021-10-25 20:04:16+00:00'])
+#380
+
+#find tweets in question
+tweets = df.iloc[[5111, 380],:]
+tweets = tweets[['date', 'content']]
+tweets.set_index('date')
+
+#tweet id date	                    content
+#5111	2020-05-01 15:11:26+00:00	Tesla stock price is too high imo
+#380	2021-10-25 20:04:16+00:00	@GerberKawasaki Strange that moved valuation, as Tesla is very much a production ramp problem, not a demand problem
+
+#read the csv files
+tsla = pd.read_csv(r'C:\Users\forrest\Desktop\schoo\IST 652 - scripting\project\tesla.csv')
+nas = pd.read_csv(r'C:\Users\forrest\Desktop\schoo\IST 652 - scripting\project\nasdaq.csv')
+
+#column value correcting
+nas["Date"] = pd.to_datetime(nas["Date"])
+tsla["Date"] = pd.to_datetime(tsla["Date"])
+#set index
+nas.set_index('Date')
+tsla.set_index('Date')
+#group nasdaq values by month
+nas = nas.groupby(pd.Grouper(freq='m',key='Date'))['Close'].last().ffill().reset_index()
+
+#group tsla values by month
+tsla2 = tsla.groupby(pd.Grouper(freq='m',key='Date'))['Close'].last().ffill().reset_index()
+
+
+
+
+#plot monthly data of nasdaq and tesla values
+x=tsla2['Date']
+y=tsla2['Close']
+x2=nas['Date']
+y2=nas['Close']
+
+#plotly.graph_objects
+fig = go.Figure()
+fig = make_subplots(specs=[[{'secondary_y': True}]])
+fig.add_trace(go.Scatter(x=x, y=y, name = 'Tesla', line_color='red'), secondary_y=False)
+fig.add_trace(go.Scatter(x=x2, y=y2, name = 'NASDAQ 100', line_color='blue'), secondary_y=True)
+fig.update_yaxes(title_text='Tesla Closing Price', secondary_y=False)
+fig.update_yaxes(title_text='NASDAQ Closing Price', secondary_y=True)
+fig.add_vrect(x0='2020-03-30', x1='2020-10-30')
+fig.add_annotation(
+            x='2020-03-30'
+            , y=900
+            , text=f"Covid"
+            , yanchor='bottom'
+            , showarrow=False
+            , align="center"
+            , arrowhead=2
+            , arrowsize=1
+            , arrowwidth=2
+            , arrowcolor="#636363"
+            , ax=0
+            , ay=0
+            , font=dict(
+                size=12
+                , color="black"
+                , family="Courier New, monospace")
+            , bordercolor='black'
+            , borderwidth=2
+            , bgcolor="red"
+            , opacity=0.8
+            , 
+  )
+fig.add_annotation(
+            x='2020-10-30'
+            , y=1000
+            , text=f"Covid 2nd Wave"
+            , yanchor='bottom'
+            , showarrow=False
+            , align="center"
+            , arrowhead=2
+            , arrowsize=1
+            , arrowwidth=2
+            , arrowcolor="#636363"
+            , ax=0
+            , ay=0
+            , font=dict(
+                size=12
+                , color="black"
+                , family="Courier New, monospace")
+            , bordercolor='black'
+            , borderwidth=2
+            , bgcolor="red"
+            , opacity=0.8
+            , 
+  )
+#dynamic plot browser graphing
+plot = DynamicPlot(fig)
+plot.show()
+
+#create difference-interval columns
+tsla['1otm'] = tsla['Close'].diff()
+tsla['otm'] = tsla['Close'].diff(7)
+tsla['30otm'] = tsla['Close'].diff(30)
+tsla['60otm'] = tsla['Close'].diff(60)
+tsla['90otm'] = tsla['Close'].diff(90)
+
+#create function to return maximum loss info in order to annotate graph
+def otm(df, column):
+    y = column.min()
+    z = column.max()
+    y1 = column.idxmin()
+    y2 = column.idxmax()
+    y3 = df['Date'].loc[[y1]]
+    y4 = df['Date'].loc[[y2]]
+    y5 = df['Close'].loc[[y1]]
+    print('Min =',y,', max =',z,',Min date =',y3,'Max date =',y4, 'Close =',y5)
+
+#call the function for each interval
+otm(tsla, tsla['1otm'])
+otm(tsla, tsla['otm'])
+otm(tsla, tsla['30otm'])
+otm(tsla, tsla['90otm'])
+
+#create new dataframe from 2019 on
+tslamoreshort = tsla[~(tsla['Date'] < '2019-10-01')]    
+
+#candlestick graph with annotations
+fig4 = go.Figure(data=[go.Candlestick(x=tslamoreshort['Date'],
+                open=tslamoreshort['Open'], high=tslamoreshort['High'],
+                low=tslamoreshort['Low'], close=tslamoreshort['Close'])
+                      ])
+fig4.update_layout(title='Tesla Daily Candlestick <br>October 2019-November 2021')
+
+fig4.add_annotation(
+            x='2021-11-09'
+            , y=1023.5
+            , text=f"Largest 1 day loss<br>-$139.44"
+            , yanchor='bottom'
+            , showarrow=True
+            , align="center"
+            , arrowhead=2
+            , arrowsize=1
+            , arrowwidth=2
+            , arrowcolor="#636363"
+            , ax=-130
+            , ay=250
+            , font=dict(
+                size=12
+                , color="black"
+                , family="Courier New, monospace")
+            , bordercolor='black'
+            , borderwidth=2
+            , bgcolor="red"
+            , opacity=0.8
+            , 
+  )
+
+fig4.add_annotation(
+            x='2021-11-15'
+            , y=1013.390015
+            , text=f"Largest 7 day loss<br>-$216.52"
+            , yanchor='bottom'
+            , showarrow=True
+            , align="center"
+            , arrowhead=2
+            , arrowsize=1
+            , arrowwidth=2
+            , arrowcolor="#636363"
+            , ax=-10
+            , ay=200
+            , font=dict(
+                size=12
+                , color="black"
+                , family="Courier New, monospace")
+            , bordercolor='black'
+            , borderwidth=2
+            , bgcolor="red"
+            , opacity=0.8
+            , 
+  )
+
+fig4.add_annotation(
+            x='2021-05-19'
+            , y=563.46
+            , text=f"Largest 90 day loss<br>-$316.56"
+            , yanchor='bottom'
+            , showarrow=True
+            , align="center"
+            , arrowhead=2
+            , arrowsize=1
+            , arrowwidth=2
+            , arrowcolor="#636363"
+            , ax=0
+            , ay=60
+            , font=dict(
+                size=12
+                , color="black"
+                , family="Courier New, monospace")
+            , bordercolor='black'
+            , borderwidth=2
+            , bgcolor="red"
+            , opacity=0.8
+            , 
+  )
+
+fig4.add_annotation(
+            x='2021-03-08'
+            , y=563.00
+            , text=f"Largest 30 day loss<br>-$283.64"
+            , yanchor='bottom'
+            , showarrow=True
+            , align="center"
+            , arrowhead=2
+            , arrowsize=1
+            , arrowwidth=2
+            , arrowcolor="#636363"
+            , ax=0
+            , ay=100
+            , font=dict(
+                size=12
+                , color="black"
+                , family="Courier New, monospace")
+            , bordercolor='black'
+            , borderwidth=2
+            , bgcolor="red"
+            , opacity=0.8
+            , 
+  )
+
+fig4.add_annotation(
+            x='2020-05-01'
+            , y=160
+            , text=f'"Tesla stock price is too high imo"<br>Temporary 10% slide'
+            , yanchor='bottom'
+            , showarrow=True
+            , align="center"
+            , arrowhead=2
+            , arrowsize=1
+            , arrowwidth=2
+            , arrowcolor="#636363"
+            , ax=-40
+            , ay=-55
+            , font=dict(
+                size=12
+                , color="red"
+                , family="Courier New, monospace")
+            , bordercolor='black'
+            , borderwidth=2
+            , bgcolor="#CFECEC"
+            , opacity=0.8
+            , 
+  )
+
+fig4.add_annotation(
+            x='2021-10-25'
+            , y=1020
+            , text=f'"@GerberKawasaki Strange that moved valuation,<br>as Tesla is very much a production ramp problem,<br>not a demand problem"<br>10% intraday slide, quickly recovered'
+            , yanchor='bottom'
+            , showarrow=True
+            , align="center"
+            , arrowhead=2
+            , arrowsize=1
+            , arrowwidth=2
+            , arrowcolor="#636363"
+            , ax=-250
+            , ay=-10
+            , font=dict(
+                size=12
+                , color="red"
+                , family="Courier New, monospace")
+            , bordercolor='black'
+            , borderwidth=2
+            , bgcolor="#CFECEC"
+            , opacity=0.8
+            , 
+  )
+
+plot4 = DynamicPlot(fig4)
+plot4.show()
