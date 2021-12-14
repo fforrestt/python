@@ -1,0 +1,173 @@
+***
+HW1, working with pandas dataframes
+***
+
+
+import pandas as pd
+
+import matplotlib.pyplot as plt; plt.rcdefaults()
+
+import matplotlib.pyplot as plt
+
+#read the data
+
+df = pd.read_csv('C:/Users/forrest/Desktop/schoo/IST 652 - scripting/project/atlantic.csv', header=[0])
+
+df = df.fillna('0')
+
+#no na's!
+
+#adding year column
+
+df['Date'].astype(str)
+Out[302]: 
+0        18510625
+1        18510625
+2        18510625
+3        18510625
+4        18510625
+  
+49100    20151112
+49101    20151112
+49102    20151113
+49103    20151113
+49104    20151113
+Name: Date, Length: 49105, dtype: object
+
+df['Name'].astype(str)
+Out[303]: 
+0        UNNAMED
+1        UNNAMED
+2        UNNAMED
+3        UNNAMED
+4        UNNAMED
+  
+49100       KATE
+49101       KATE
+49102       KATE
+49103       KATE
+49104       KATE
+Name: Name, Length: 49105, dtype: object
+
+df.head()
+Out[304]: 
+         ID     Name      Date  ...  HighWindSE HighWindSW HighWindNW
+0  AL011851  UNNAMED  18510625  ...        -999       -999       -999
+1  AL011851  UNNAMED  18510625  ...        -999       -999       -999
+2  AL011851  UNNAMED  18510625  ...        -999       -999       -999
+3  AL011851  UNNAMED  18510625  ...        -999       -999       -999
+4  AL011851  UNNAMED  18510625  ...        -999       -999       -999
+
+[5 rows x 22 columns]
+
+#create dataframe for just Maximum Wind
+
+windf = pd.DataFrame(df['MaximumWind'])
+
+windf
+Out[307]: 
+       MaximumWind
+0               80
+1               80
+2               80
+3               80
+4               80
+           ...
+49100           55
+49101           55
+49102           50
+49103           45
+49104           45
+
+[49105 rows x 1 columns]
+
+#find and drop any NA's
+
+nan_df = windf[windf.isna().any(axis=1)]
+
+windf = windf.dropna(how='any')
+
+#what is the highest recorded wind speed within this dataset?
+
+windf.max(axis = 0)
+Out[312]: 
+MaximumWind    165
+dtype: int64
+
+#create counts of wind speed by each recorded event with said wind speed
+
+allwind = windf.groupby(by='MaximumWind').size()
+
+#create dataframe with wind speed total counts
+
+allwindf = pd.DataFrame(allwind)
+
+#create new index for dataframe
+
+allwindf = allwindf.reset_index()
+
+#remove -99's from Wind Speed
+
+allwindf = allwindf.drop([0])
+
+#rename final column
+
+allwindf.columns = ['Max Wind','Total']
+
+allwindf
+Out[323]: 
+    Max Wind  Total
+1         10     61
+2         15    193
+3         20   1237
+4         25   4432
+5         30   5900
+6         32      1
+7         35   4515
+8         40   4582
+9         45   3413
+10        50   4225
+11        55   2124
+12        60   3016
+13        65   2098
+14        70   2875
+15        75   1442
+16        80   1838
+17        85   1485
+18        90   1634
+19        95    669
+20       100    773
+21       105    652
+22       110    508
+23       115    318
+24       120    300
+25       125    173
+26       130    112
+27       135     56
+28       140     64
+29       145     30
+30       150     26
+31       155      9
+32       160      5
+33       165      1
+
+#plot!
+
+x = allwindf['Max Wind']
+
+y = allwindf['Total']
+
+plt.bar(x, y, color=['g'])
+Out[327]: <BarContainer object of 33 artists>
+
+allwindf.describe()
+Out[328]: 
+         Max Wind        Total
+count   33.000000    33.000000
+mean    85.818182  1477.787879
+std     47.165569  1708.563409
+min     10.000000     1.000000
+25%     45.000000    64.000000
+50%     85.000000   669.000000
+75%    125.000000  2124.000000
+max    165.000000  5900.000000
