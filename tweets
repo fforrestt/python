@@ -1,0 +1,48 @@
+"""
+HW2, working with tweet importing and analysis
+"""
+
+
+
+import os
+import pandas as pd
+import datetime as dt
+import matplotlib.pyplot as plt; plt.rcdefaults()
+import matplotlib.pyplot as plt
+
+tweet_count = 5000
+text_query = "TSLA"
+since_date = "2020-12-10"
+until_date = "2020-12-30"
+
+# Using OS library to call CLI commands in Python
+os.system('snscrape --jsonl --max-results {} --since {} twitter-search "{} until:{}"> text-query-tweets.json'.format(tweet_count, since_date, text_query, until_date))
+
+# Reads the json generated from the CLI command above and creates a pandas dataframe
+tweets_df2 = pd.read_json('text-query-tweets.json', lines=True)
+
+
+# Export dataframe into a CSV
+tweets_df2.to_csv('text-query-tweets.csv', sep=',', index=False)
+
+
+#create new dataframes
+dfdates = pd.DataFrame(tweets_df2['date'])
+times = pd.DataFrame(dfdates['date'])
+
+#change dates to strings in order to gather only the hour from each, had trouble coercing the datetime commands due to how the data is gathered within the sheet.
+times['date'] = pd.to_str(times['date'], errors='coerce')
+times['hour'] = times['date'].str[11:13]
+
+#create new dataframe with counts of tweets within each hour
+hours = pd.DataFrame(times.groupby(times['hour']).count())
+hours
+
+#prepare final dataframe for plot
+hours = hours.reset_index()
+hours.columns = ['hour', 'total tweets']
+hours
+#plot
+x = hours['hour']
+y= hours['total tweets']
+plt.bar(x, y, color=['g'])
